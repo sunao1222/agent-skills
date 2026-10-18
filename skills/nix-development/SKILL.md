@@ -79,6 +79,16 @@ If the user requests `devenv`, select an integration that is compatible with the
 
 For `direnv`, use the project's existing convention. A flake-based `.envrc` generally relies on nix-direnv support; a devenv-based `.envrc` relies on the appropriate devenv integration. Do not write an entry point whose required direnv extension has not been identified.
 
+Treat these as separate facts: whether `nix-direnv` is installed, whether it is integrated with this user's `direnv`, and whether this project's `.envrc` evaluates successfully. Do not use `direnv stdlib` (or the absence of `use flake` in its output) as an installation check: it reflects the standard library available to that invocation and is not authoritative for declarative NixOS or Home Manager configuration. In particular, an empty `direnv stdlib | grep -F 'use flake'` result is not evidence that nix-direnv is absent.
+
+When discovery is approved, inspect the relevant evidence without overstating what it proves:
+
+- On NixOS or with Home Manager configuration available, look for `programs.direnv.enable = true` and `programs.direnv.nix-direnv.enable = true` (or the equivalent module configuration). Report this as declarative configuration, not as proof that the active shell has loaded it.
+- Check whether `nix-direnv` and `direnv` are available in the current environment and inspect the applicable `direnvrc` or generated direnv configuration when accessible. Report an unavailable executable or missing integration file as a current-environment observation, not a claim about the user's declarative configuration.
+- Read the project's `.envrc` to identify its required extension. Use `direnv status` to inspect its current authorization/loading state. Do not infer that a `use flake` entry point works until it has been evaluated in that project.
+
+Only after explicit approval, authorize and test a project `.envrc`. Call out that `direnv allow` changes the trust state; follow it with `direnv reload` or `direnv exec . <harmless-command>` to exercise the configuration. If evaluation cannot be performed, say that integration is unverified rather than declaring nix-direnv uninstalled.
+
 ### 3. Obtain edit approval
 
 Use a concise confirmation request similar to:
