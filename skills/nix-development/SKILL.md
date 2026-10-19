@@ -9,7 +9,7 @@ Create and maintain project development environments using Nix flakes, `nixpkgs`
 
 ## Interaction contract
 
-Treat Nix configuration as executable project policy. Do not modify it or activate it implicitly.
+Treat Nix configuration as executable project policy. Do not modify it or activate it implicitly. This section is the source of truth for approval requirements; later workflow steps apply it rather than adding exceptions.
 
 1. Inspect the repository and explain the proposed changes first.
 2. Ask for one explicit approval before creating, editing, renaming, or deleting files. Group related edits into one clear request.
@@ -60,15 +60,17 @@ Use `shell.nix` for new setups. Structure it so it can be imported by `flake.nix
 
 ## Nix formatting
 
-Use an existing project formatter and its configuration in preference to adding another one. When creating a new flake, expose `formatter.<system> = pkgs.nixfmt-rfc-style` and use `nix fmt` to format its Nix files. Add `nixfmt-rfc-style` to the development shell only when users also need the direct `nixfmt` command.
+Apply this policy as part of the approved edit plan:
 
-If an existing project has no flake formatter, configured Nix formatter, or `nixfmt` available in its development environment, do not claim that formatting is unavailable. As part of the approved edit plan, offer a one-off formatter invocation for the specific changed files:
+- Prefer the project's existing formatter and configuration.
+- For a new flake, expose `formatter.<system> = pkgs.nixfmt-rfc-style` and make `nix fmt` the canonical entry point. Add `nixfmt-rfc-style` to the development shell only when users need the direct `nixfmt` command.
+- If no formatter is configured or available, offer this one-off fallback for the specific changed files:
 
-```sh
-nix run nixpkgs#nixfmt-rfc-style -- <changed-nix-files>
-```
+  ```sh
+  nix run nixpkgs#nixfmt-rfc-style -- <changed-nix-files>
+  ```
 
-This command writes formatting changes and may download from the configured Nix registry on first use. State both effects and obtain approval before running it. It is a temporary fallback: do not add an unpinned formatter input or alter an existing project's lockfile solely for this purpose unless the user asks to adopt formatter configuration.
+  This writes formatting changes and may download from the configured Nix registry on first use. Name both effects before requesting approval. Do not add an unpinned formatter input or change a lockfile solely for this fallback unless the user asks to adopt formatter configuration.
 
 ## Design workflow
 
@@ -83,7 +85,7 @@ Summarize relevant existing files, detected project tooling, and any uncertainti
 
 ### 2. Propose an implementation
 
-Describe exactly which files will be added or changed and why. Include whether `flake.lock` will change, whether `.envrc` will be created or edited, which source owns each dependency, and how changed Nix files will be formatted. If the fallback `nix run` formatter is needed, name the exact files and call out its possible download and file modifications.
+Describe exactly which files will be added or changed and why. Include whether `flake.lock` will change, whether `.envrc` will be created or edited, and which source owns each dependency. Apply the **Nix formatting** policy: name the formatter and, for the fallback, the exact files plus its possible download and file modifications.
 
 For a new general-purpose flake, use an explicit supported-systems strategy and expose `devShells.<system>.default` plus `formatter.<system> = pkgs.nixfmt-rfc-style`. Import `shell.nix` rather than placing the whole `mkShell` body in `flake.nix`. Keep the initial package set minimal: do not add arbitrary language toolchains just to make the template appear complete.
 
@@ -111,13 +113,13 @@ Wait for an affirmative answer. If the proposed work differs from the approved p
 
 ### 4. Edit carefully
 
-Preserve formatting and local naming conventions. Format changed Nix files with the selected formatter as part of the approved edits. Keep comments focused on non-obvious constraints rather than restating Nix syntax. Pin flake inputs through `flake.lock`; do not substitute floating URLs for a lockfile.
+Preserve formatting and local naming conventions. Apply the selected formatter as part of the approved edits. Keep comments focused on non-obvious constraints rather than restating Nix syntax. Pin flake inputs through `flake.lock`; do not substitute floating URLs for a lockfile.
 
 When adding a shell package, prefer the package supplied by the project's pinned `pkgs`. Avoid unfree packages, insecure-package allowances, binary caches, or substituter configuration unless the user explicitly requests and approves them.
 
 ### 5. Propose validation and obtain separate approval
 
-After edits, list only relevant commands, explain their purpose, and request approval. Select from:
+After edits, list only relevant commands, explain their purpose, and request the separate validation approval required by the **Interaction contract**. Select from:
 
 ```sh
 nix flake check
@@ -144,4 +146,4 @@ State the files changed, the entry command(s), validation results, and any remai
 
 ## Completion criteria
 
-Consider the task complete only when the configuration is modular, the declared entry point is documented in the final response, requested checks have either passed or their result is clearly reported, and every edit and validation command was preceded by the required approval.
+Consider the task complete only when the configuration is modular, the declared entry point is documented in the final response, and requested checks have either passed or their result is clearly reported. Follow the **Interaction contract** throughout.
