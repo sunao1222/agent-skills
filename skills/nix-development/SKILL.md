@@ -23,6 +23,7 @@ If the user declines either approval, provide the plan or commands only and stop
 - Require a flake for new work. Use `nixpkgs/nixos-unstable` unless the project already pins a different revision and the user asks to change it.
 - Support all languages. Add language packages, formatters, linters, services, and environment variables only when the project needs them.
 - Prefer `nix develop` and `devShells.<system>.default` as the portable interface.
+- Format changed Nix expressions with the project's configured formatter. For a new flake, configure `nixfmt-rfc-style` and expose it through `formatter.<system>` so `nix fmt` is the canonical formatting entry point.
 - Use `devenv` for its declarative modules, services, scripts, tests, and git hooks when those features are needed. Do not create duplicate definitions in both a raw `mkShell` and devenv without explaining which one is authoritative.
 - Integrate `direnv` through a checked-in `.envrc` only when requested or when the project already uses it. Preserve a user's local-only environment settings.
 - Never replace or delete an existing `shell.nix`, `flake.nix`, `.envrc`, `devenv.nix`, lockfile, or CI setup merely because a newer layout is preferred.
@@ -57,6 +58,18 @@ For a new or lightly configured repository, propose this layout unless the repos
 
 Use `shell.nix` for new setups. Structure it so it can be imported by `flake.nix` while preserving a clear `nix-shell` entry point when the project requires one. Do not replace or delete an existing shell definition without explicit approval. During a migration, explain compatibility implications for users who still run `nix-shell`.
 
+## Nix formatting
+
+Use an existing project formatter and its configuration in preference to adding another one. When creating a new flake, expose `formatter.<system> = pkgs.nixfmt-rfc-style` and use `nix fmt` to format its Nix files. Add `nixfmt-rfc-style` to the development shell only when users also need the direct `nixfmt` command.
+
+If an existing project has no flake formatter, configured Nix formatter, or `nixfmt` available in its development environment, do not claim that formatting is unavailable. As part of the approved edit plan, offer a one-off formatter invocation for the specific changed files:
+
+```sh
+nix run nixpkgs#nixfmt-rfc-style -- <changed-nix-files>
+```
+
+This command writes formatting changes and may download from the configured Nix registry on first use. State both effects and obtain approval before running it. It is a temporary fallback: do not add an unpinned formatter input or alter an existing project's lockfile solely for this purpose unless the user asks to adopt formatter configuration.
+
 ## Design workflow
 
 ### 1. State the current situation
@@ -70,9 +83,9 @@ Summarize relevant existing files, detected project tooling, and any uncertainti
 
 ### 2. Propose an implementation
 
-Describe exactly which files will be added or changed and why. Include whether `flake.lock` will change, whether `.envrc` will be created or edited, and which source owns each dependency.
+Describe exactly which files will be added or changed and why. Include whether `flake.lock` will change, whether `.envrc` will be created or edited, which source owns each dependency, and how changed Nix files will be formatted. If the fallback `nix run` formatter is needed, name the exact files and call out its possible download and file modifications.
 
-For a new general-purpose flake, use an explicit supported-systems strategy and expose `devShells.<system>.default`. Import `shell.nix` rather than placing the whole `mkShell` body in `flake.nix`. Keep the initial package set minimal: do not add arbitrary language toolchains just to make the template appear complete.
+For a new general-purpose flake, use an explicit supported-systems strategy and expose `devShells.<system>.default` plus `formatter.<system> = pkgs.nixfmt-rfc-style`. Import `shell.nix` rather than placing the whole `mkShell` body in `flake.nix`. Keep the initial package set minimal: do not add arbitrary language toolchains just to make the template appear complete.
 
 If the user requests `devenv`, select an integration that is compatible with the installed/version-pinned devenv setup. Keep devenv declarations in `devenv.nix` (or focused files it imports). Make clear whether users enter with `nix develop`, `devenv shell`, or both, and ensure documented entry points do not silently diverge.
 
@@ -98,7 +111,7 @@ Wait for an affirmative answer. If the proposed work differs from the approved p
 
 ### 4. Edit carefully
 
-Preserve formatting and local naming conventions. Keep comments focused on non-obvious constraints rather than restating Nix syntax. Pin flake inputs through `flake.lock`; do not substitute floating URLs for a lockfile.
+Preserve formatting and local naming conventions. Format changed Nix files with the selected formatter as part of the approved edits. Keep comments focused on non-obvious constraints rather than restating Nix syntax. Pin flake inputs through `flake.lock`; do not substitute floating URLs for a lockfile.
 
 When adding a shell package, prefer the package supplied by the project's pinned `pkgs`. Avoid unfree packages, insecure-package allowances, binary caches, or substituter configuration unless the user explicitly requests and approves them.
 
