@@ -48,15 +48,14 @@ For a new or lightly configured repository, propose this layout unless the repos
 .
 ├── flake.nix
 ├── flake.lock
+├── shell.nix               # packages, variables, and shell hooks
 ├── devenv.nix              # devenv-specific modules and services, when used
 ├── .envrc                  # direnv entry point, when used
-└── nix/
-    └── devshell.nix        # packages, variables, and shell hooks
 ```
 
-`flake.nix` should contain inputs, supported-system plumbing, and exported outputs. Put `mkShell` arguments, package lists, environment variables, and shell hooks in `nix/devshell.nix`. Use further focused files under `nix/` when the shell grows substantially, for example `nix/packages.nix` or `nix/hooks.nix`.
+`flake.nix` should contain inputs, supported-system plumbing, and exported outputs. Import `shell.nix` for `mkShell` arguments, package lists, environment variables, and shell hooks. Use further focused files under `nix/` when the shell grows substantially, for example `nix/packages.nix` or `nix/hooks.nix`.
 
-Do not use `shell.nix` for new setups. If one already exists, retain it unless the user explicitly approves a migration plan. During a migration, explain compatibility implications for users who still run `nix-shell`.
+Use `shell.nix` for new setups. Structure it so it can be imported by `flake.nix` while preserving a clear `nix-shell` entry point when the project requires one. Do not replace or delete an existing shell definition without explicit approval. During a migration, explain compatibility implications for users who still run `nix-shell`.
 
 ## Design workflow
 
@@ -73,7 +72,7 @@ Summarize relevant existing files, detected project tooling, and any uncertainti
 
 Describe exactly which files will be added or changed and why. Include whether `flake.lock` will change, whether `.envrc` will be created or edited, and which source owns each dependency.
 
-For a new general-purpose flake, use an explicit supported-systems strategy and expose `devShells.<system>.default`. Import the separate shell expression rather than placing the whole `mkShell` body in `flake.nix`. Keep the initial package set minimal: do not add arbitrary language toolchains just to make the template appear complete.
+For a new general-purpose flake, use an explicit supported-systems strategy and expose `devShells.<system>.default`. Import `shell.nix` rather than placing the whole `mkShell` body in `flake.nix`. Keep the initial package set minimal: do not add arbitrary language toolchains just to make the template appear complete.
 
 If the user requests `devenv`, select an integration that is compatible with the installed/version-pinned devenv setup. Keep devenv declarations in `devenv.nix` (or focused files it imports). Make clear whether users enter with `nix develop`, `devenv shell`, or both, and ensure documented entry points do not silently diverge.
 
@@ -93,7 +92,7 @@ Only after explicit approval, authorize and test a project `.envrc`. Call out th
 
 Use a concise confirmation request similar to:
 
-> I will add `nix/devshell.nix`, update `flake.nix` to export the default dev shell, add/update `devenv.nix` and `.envrc`, and generate/update `flake.lock` if dependency resolution requires it. May I make these edits?
+> I will add `shell.nix`, update `flake.nix` to export the default dev shell, add/update `devenv.nix` and `.envrc`, and generate/update `flake.lock` if dependency resolution requires it. May I make these edits?
 
 Wait for an affirmative answer. If the proposed work differs from the approved plan, ask again before making the additional edits.
 
